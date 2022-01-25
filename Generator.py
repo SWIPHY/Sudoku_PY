@@ -2,52 +2,46 @@ import pySudoku
 import random
 import time
 
-def toString(s):
+def toString(sudoku):
     """
     Formate une liste 2D du sudoku en une ligne d'entiers
     pour une écriture facile.
     """
-    output = ""
+    sortie = ""
     for i in range(9):
         for j in range(9):
-            output += str(s[i][j])
-    return output + "\n"
+            sortie += str(sudoku[i][j])
+    return sortie + "\n"
 
-def checkValid(s, row, col):
+def vérif_Validité(sudoku, row, collone):
     """
     Renvoie True si une cellule donnée est valide dans le Sudoku, sinon Faux. 
     Une case est valide si le nombre dans cette meme case n'est pas présente dans l'une des autres cases de la même ligne,
     de la même colonne ou du même bloc.
     """
-
-    """
-    row = ligne
-    column = colonnes
-    """
-
     block_row = row // 3
-    block_col = col // 3
+    block_collone = collone // 3
 
-    # Lignes et Colonnes
-    # Ignorer les espaces vides
+    # Row and Column
+    # Ignore blank spots
     for m in range(9):
-        if s[row][m] != 0 and m != col and s[row][m] == s[row][col]:
+        if sudoku[row][m] != 0 and m != collone and sudoku[row][m] == sudoku[row][collone]:
             return False
-        if s[m][col] != 0 and m != row and s[m][col] == s[row][col]:
+        if sudoku[m][collone] != 0 and m != row and sudoku[m][collone] == sudoku[row][collone]:
             return False
 
     # Block
     for m in range(3):
         for n in range(3):
             newRow = m + block_row*3
-            newCol = n + block_col*3
-            if s[newRow][newCol] != 0 and newRow != row and newCol != col\
-            and s[newRow][newCol ] == s[row][col]:
+            newCol = n + block_collone*3
+            if sudoku[newRow][newCol] != 0 and newRow != row and newCol != collone\
+            and sudoku[newRow][newCol ] == sudoku[row][collone]:
                 return False
 
     return True
 
-def populateBoard(s, row, col):
+def populateBoard(sudoku, row, collone):
     """
     À partir d'une grille 9x9 de 0, cette fonction remplit récursivement
     la grille. Il fait une liste d'entiers de 1 à 9, mélange l'ordre et
@@ -56,34 +50,27 @@ def populateBoard(s, row, col):
     il essaie le suivant dans la liste. Si aucun des nombres entiers ne fonctionne, alors
     il défini sur vide et retourne false.
     """
-    if row == 8 and col == 8:
-        used = pySudoku.test_cell(s, row, col)
-        s[row][col] = used.index(0)
+    if row == 8 and collone == 8:
+        used = pySudoku.test_cell(sudoku, row, collone)
+        sudoku[row][collone] = used.index(0)
         return True
 
-    if col == 9:
+    if collone == 9:
         row = row+1
-        col = 0
+        collone = 0
 
     temp = list(range(1, 10))
     random.shuffle(temp)
     # Fill Sudoku
     for i in range(9):
-        s[row][col] = temp[i]
-        if checkValid(s, row, col):
-            if populateBoard(s, row, col+1):
+        sudoku[row][collone] = temp[i]
+        if vérif_Validité(sudoku, row, collone):
+            if populateBoard(sudoku, row, collone+1):
                 return True
-    s[row][col] = 0
+    sudoku[row][collone] = 0
     return False
 
-def DFS_solve(copy_s, row, col):
-    """
-    DFS : L'algorithme de parcours en profondeur (ou DFS, pour Depth-First Search) est un algorithme de parcours d'arbre, 
-    et plus généralement de parcours de graphe. 
-    Il se décrit naturellement de manière récursive. 
-    Son application la plus simple consiste à déterminer s'il existe un chemin d'un sommet à un autre.
-    """
-    
+def DFS_solve(copy_s, row, collone):
     """
     Résout récursivement la grille avec un retour en arrière un utilisant
     l'algorithme DFS, en retournant le nombre de solutions trouvées.
@@ -93,33 +80,34 @@ def DFS_solve(copy_s, row, col):
     num_solutions = 0
 
     # Atteint les dernières cellules sans aucune erreur, il y a donc une solution
-    if row == 8 and col == 8:
+    if row == 8 and collone == 8:
         return num_solutions + 1
 
-    if col == 9:
+    if collone == 9:
         row = row+1
-        col = 0
+        collone = 0
 
-    if copy_s[row][col] == 0:
+    if copy_s[row][collone] == 0:
         # Used = liste de taille 10 représentant quels nombres sont possibles
         # Dans la grille: 0 = possible, 1 = impossible.
-        used = pySudoku.test_cell(copy_s, row, col)
+        used = pySudoku.test_cell(copy_s, row, collone)
         # Aucune solution possible. Renvoie 0 pour le nombre de solutions.
         if 0 not in used:
             return 0
 
         while 0 in used:
-            copy_s[row][col] = used.index(0)
+            copy_s[row][collone] = used.index(0)
             used[used.index(0)] = 1
-            num_solutions += DFS_solve(copy_s, row, col+1)
+            num_solutions += DFS_solve(copy_s, row, collone+1)
 
-        copy_s[row][col] = 0
+        # Reached here? Then we tried 1-9 without success
+        copy_s[row][collone] = 0
         return num_solutions
 
-    num_solutions += DFS_solve(copy_s, row, col+1)
+    num_solutions += DFS_solve(copy_s, row, collone+1)
     return num_solutions
 
-def reduce_sudoku(s, difficulty):
+def reduce_sudoku(sudoku, niveau_difficultée):
     """
     Génére d'abord une liste d'entiers 0-80 représentant les indices
     dans la grille. S'il existe plus d'une solution, alors ce n'est pas une
@@ -132,28 +120,26 @@ def reduce_sudoku(s, difficulty):
 
     while indices:
         row = indices[0] // 9
-        col = indices[0] % 9
-        temp = s[row][col]
-        s[row][col] = 0
+        collone = indices[0] % 9
+        temp = sudoku[row][collone]
+        sudoku[row][collone] = 0
         indices = indices[1:]
 
-        copy_s = [l[:] for l in s]
+        copy_s = [l[:] for l in sudoku]
 
         pySudoku.initial_try(copy_s)
 
         for line in copy_s:
             if 0 in line:
                 num_solutions = DFS_solve(copy_s, 0, 0)
-                # Si la grille n'a pas de solution unique, alors ça annule la dernière insertion.
+               # Si la grille n'a pas de solution unique, alors ça annule la dernière insertion.
                 if num_solutions > 1:
-                    s[row][col] = temp
-                    # Si nous voulons des grilles faciles, nous nous arrêterions ici après avoir trouvé
-                    # le premier puzzle avec une solution unique sans essayer de se compliquer la taache en essayant de supprimer d'autres éléments et en voyant
-                    # s'il existe une autre grille plus difficile avec une solution unique...
-                    """
-                    E et e = easy => facile
-                    """
-                    if difficulty == "E" or difficulty == "e":
+                    sudoku[row][collone] = temp
+                    # If we want easy puzzles, we would stop here after finding
+                    # the first puzzle with a unique solution without attempting to
+                    # make it harder by trying to remove other elements and seeing
+                    # if there is another harder puzzle with a unique solution
+                    if niveau_difficultée == "E" or niveau_difficultée == "e":
                         return
                 break
 
@@ -164,22 +150,23 @@ Ensuite pose la question de 'Combien de grille de Sudoku voulez-vous générer ?
 Puis demande 'Grilles facile ou difficile (e ou d)'.
 Enfin le programme génère la grille ou les grilles du Sudoku dans le fichier qui vient de se créér.
 """
+
 def main():
     f = open("SudokuGrilles.txt", "w")
-    user_input = int(input("Combien de grille de Sudoku voulez-vous générer ? : "))
-    difficulty = input("Grilles facile ou difficile (e ou d) : ")
+    entrée_user = int(input("Combiens de grilles souhaitez-vous générer ? : "))
+    niveau_difficultée = input("Niveau Easy ou Difficile ? (e ou d) : ")
     start = time.time()
 
-    for _ in range(user_input):
+    for _ in range(entrée_user):
         # 9 x 9 grid of 0s
-        s = [[0]*9 for _ in range(9)]
+        sudoku = [[0]*9 for _ in range(9)]
 
-        populateBoard(s, 0, 0)
-        reduce_sudoku(s, difficulty)
-        output = toString(s)
-        f.write(output)
+        populateBoard(sudoku, 0, 0)
+        reduce_sudoku(sudoku, niveau_difficultée)
+        sortie = toString(sudoku)
+        f.write(sortie)
 
-    print("{:.2f} secondes pour trouver {} Sudoku Grilles.".format(time.time() - start, user_input))
+    print("{:.2f} seconds to come up with {} Sudoku puzzles.".format(time.time() - start, entrée_user))
 
 if __name__ == '__main__':
     main()
